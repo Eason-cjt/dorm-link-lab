@@ -3,7 +3,7 @@
  */
 
 import { deviceLabel, DeviceState, cloneDevice } from '../model/DeviceModel';
-import { cloneEnv, EnvData, envFieldLabel, envFieldUnit, formatEnvValue, EnvField } from '../model/EnvModel';
+import { cloneEnv, EnvData, envFieldLabel, envFieldUnit, formatEnvValue, EnvField, readEnvField } from '../model/EnvModel';
 import { ExecutionResult } from '../model/LogModel';
 import { AppStore } from '../service/AppStore';
 import { deviceStatusText, isDeviceActive } from '../common/Formatter';
@@ -61,13 +61,19 @@ export struct DashboardView {
     }
   }
 
+  /**
+   * 环境指标块。
+   * 注意：@Builder 的参数是「按值传入」的，传入计算好的字符串会导致状态更新后
+   * 界面不重算（参数被缓存）。因此这里只传不变的字段枚举，数值在 Builder 内部
+   * 直接读 this.env，才能跟随 @State 刷新。
+   */
   @Builder
-  envChip(label: string, value: string) {
+  envChip(field: EnvField) {
     Column({ space: 4 }) {
-      Text(label)
+      Text(envFieldLabel(field))
         .fontSize(12)
         .fontColor('#6B7280')
-      Text(value)
+      Text(formatEnvValue(field, readEnvField(this.env, field)))
         .fontSize(18)
         .fontWeight(FontWeight.Medium)
         .fontColor('#111827')
@@ -133,14 +139,10 @@ export struct DashboardView {
           .width('100%')
 
           Row() {
-            this.envChip(envFieldLabel(EnvField.TEMPERATURE),
-              formatEnvValue(EnvField.TEMPERATURE, this.env.temperature))
-            this.envChip(envFieldLabel(EnvField.HUMIDITY),
-              formatEnvValue(EnvField.HUMIDITY, this.env.humidity))
-            this.envChip(envFieldLabel(EnvField.ILLUMINANCE),
-              formatEnvValue(EnvField.ILLUMINANCE, this.env.illuminance))
-            this.envChip(envFieldLabel(EnvField.OCCUPANCY),
-              this.env.occupancy ? '有人' : '无人')
+            this.envChip(EnvField.TEMPERATURE)
+            this.envChip(EnvField.HUMIDITY)
+            this.envChip(EnvField.ILLUMINANCE)
+            this.envChip(EnvField.OCCUPANCY)
           }
           .width('100%')
         }

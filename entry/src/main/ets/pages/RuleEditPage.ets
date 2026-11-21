@@ -183,6 +183,42 @@ struct RuleEditPage {
     .width('100%')
   }
 
+  /**
+   * 条件区标题。计数必须在 Builder 内部读 this.rule 才能跟随增删刷新——
+   * 若把 `已配置 x / 2` 作为 sectionTitle 的参数传入，参数被按值缓存，
+   * 添加条件后标题会一直停在旧值。
+   */
+  @Builder
+  conditionTitle() {
+    Row() {
+      Text('触发条件')
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#374151')
+      Blank()
+      Text(`已配置 ${this.rule.conditions.length} / 2`)
+        .fontSize(11)
+        .fontColor('#9CA3AF')
+    }
+    .width('100%')
+  }
+
+  /** 动作区标题，计数同样在 Builder 内部读取 */
+  @Builder
+  actionTitle() {
+    Row() {
+      Text('设备动作')
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#374151')
+      Blank()
+      Text(`已配置 ${this.rule.actions.length} / 3`)
+        .fontSize(11)
+        .fontColor('#9CA3AF')
+    }
+    .width('100%')
+  }
+
   @Builder
   segmentRow(options: string[], selectedIndex: number, onPick: (index: number) => void) {
     Flex({ wrap: FlexWrap.Wrap }) {
@@ -482,7 +518,7 @@ struct RuleEditPage {
 
           // 条件
           Column({ space: 10 }) {
-            this.sectionTitle('触发条件', `已配置 ${this.rule.conditions.length} / 2`)
+            this.conditionTitle()
             ForEach(this.rule.conditions, (condition: RuleCondition, index: number) => {
               this.conditionCard(condition, index)
             }, (condition: RuleCondition, index: number) => `c_${index}_${condition.field}_${condition.op}_${condition.value}`)
@@ -528,7 +564,7 @@ struct RuleEditPage {
 
           // 动作
           Column({ space: 10 }) {
-            this.sectionTitle('设备动作', `已配置 ${this.rule.actions.length} / 3`)
+            this.actionTitle()
             ForEach(this.rule.actions, (action: RuleAction, index: number) => {
               this.actionCard(action, index)
             }, (action: RuleAction, index: number) => `a_${index}_${action.device}_${action.property}_${action.value}`)
