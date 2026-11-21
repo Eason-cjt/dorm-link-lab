@@ -4,7 +4,7 @@
 
 import { promptAction } from '@kit.ArkUI';
 import { cloneDevice, DeviceState, deviceLabel, formatPropertyValue } from '../model/DeviceModel';
-import { EnvData, EnvField, envFieldLabel, formatEnvValue } from '../model/EnvModel';
+import { EnvData, EnvField, envFieldLabel, formatEnvValue, readEnvField } from '../model/EnvModel';
 import { ConflictRecord, DeviceChange, ExecutionResult, RuleHit, SkippedRule } from '../model/LogModel';
 import { RuleEngine } from '../engine/RuleEngine';
 import { AppStore } from '../service/AppStore';
@@ -86,23 +86,35 @@ export struct SimulatorView {
     });
   }
 
+  /**
+   * 环境参数滑杆。数值必须在 Builder 内部读 this 才能跟随场景切换刷新——
+   * 若把 value 作为参数按值传入，参数被缓存，点「夏季午休」「阴雨傍晚」后
+   * 数字会一直停在旧值（滑块位置也不动），只有 onChange 回调改的是真值。
+   * min / max / step 是常量，不受影响。
+   */
   @Builder
-  envSlider(label: string, unit: string, value: number, min: number, max: number, step: number,
+  envSlider(field: EnvField, min: number, max: number, step: number,
     onChange: (value: number) => void) {
     Column({ space: 4 }) {
       Row() {
-        Text(label)
+        Text(envFieldLabel(field))
           .fontSize(13)
           .fontColor('#374151')
         Blank()
-        Text(`${Math.round(value)}${unit}`)
+        Text(formatEnvValue(field, readEnvField(this.buildEnv(), field)))
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
           .fontColor('#111827')
       }
       .width('100%')
 
-      Slider({ value: value, min: min, max: max, step: step, style: SliderStyle.OutSet })
+      Slider({
+        value: readEnvField(this.buildEnv(), field),
+        min: min,
+        max: max,
+        step: step,
+        style: SliderStyle.OutSet
+      })
         .width('100%')
         .selectedColor('#2563EB')
         .onChange((current: number) => {
@@ -242,15 +254,15 @@ export struct SimulatorView {
             .fontColor('#374151')
             .width('100%')
 
-          this.envSlider(envFieldLabel(EnvField.TEMPERATURE), '℃', this.temperature, 10, 40, 1,
+          this.envSlider(EnvField.TEMPERATURE, 10, 40, 1,
             (value: number) => {
               this.temperature = value;
             })
-          this.envSlider(envFieldLabel(EnvField.HUMIDITY), '%', this.humidity, 10, 95, 1,
+          this.envSlider(EnvField.HUMIDITY, 10, 95, 1,
             (value: number) => {
               this.humidity = value;
             })
-          this.envSlider(envFieldLabel(EnvField.ILLUMINANCE), 'lux', this.illuminance, 0, 2000, 50,
+          this.envSlider(EnvField.ILLUMINANCE, 0, 2000, 50,
             (value: number) => {
               this.illuminance = value;
             })
@@ -327,7 +339,8 @@ export struct SimulatorView {
                 .width('100%')
               ForEach(this.result.changes, (change: DeviceChange, index: number) => {
                 this.changeRow(change)
-              }, (change: DeviceChange, index: number) => `chg_${index}`)
+              }, (change: DeviceChange, index: number) =>
+              `chg_${index}_${change.deviceName}_${change.property}_${change.fromValue}_${change.toValue}_${change.ruleId}`)
               if (this.result.changes.length === 0) {
                 Text('设备状态无需改变')
                   .fontSize(12)
@@ -349,7 +362,8 @@ export struct SimulatorView {
                   .width('100%')
                 ForEach(this.result.conflicts, (conflict: ConflictRecord, index: number) => {
                   this.conflictRow(conflict)
-                }, (conflict: ConflictRecord, index: number) => `cf_${index}`)
+                }, (conflict: ConflictRecord, index: number) =>
+                `cf_${index}_${conflict.deviceName}_${conflict.property}_${conflict.winnerRuleId}_${conflict.loserRuleId}_${conflict.winnerValue}`)
               }
               .width('100%')
             }
@@ -382,7 +396,7 @@ export struct SimulatorView {
                       .fontColor('#9CA3AF')
                   }
                   .width('100%')
-                }, (skipped: SkippedRule, index: number) => `sk_${index}`)
+                }, (skipped: SkippedRule, index: number) => `sk_${index}_${skipped.ruleId}_${skipped.reason}`)
               }
               .width('100%')
               .padding(10)
